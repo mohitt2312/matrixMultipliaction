@@ -5,6 +5,7 @@ This Mapper class emits matrix values with keys that help the Reducer compute th
 java
 Copy code
 import java.io.IOException;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Mapper;
@@ -32,14 +33,14 @@ public class MatrixMapper extends Mapper<Object, Text, Text, IntWritable> {
         int v = Integer.parseInt(parts[3]);
 
         if (matrixType.equals("A")) {
-            // Matrix A: Emit key as (i, k) with value as A[i][k]
+            // Emit (i, k) with value A[i][k]
             for (int k = 0; k < B_COLUMNS; k++) {
                 this.key.set(i + "," + k);
                 value.set(v);
                 context.write(this.key, value);
             }
         } else if (matrixType.equals("B")) {
-            // Matrix B: Emit key as (k, j) with value as B[k][j]
+            // Emit (k, j) with value B[k][j]
             for (int k = 0; k < A_ROWS; k++) {
                 this.key.set(k + "," + j);
                 value.set(v);
@@ -48,6 +49,7 @@ public class MatrixMapper extends Mapper<Object, Text, Text, IntWritable> {
         }
     }
 }
+
 
 
 MatrixReducer.java
@@ -79,6 +81,7 @@ public class MatrixReducer extends Reducer<Text, IntWritable, Text, IntWritable>
         context.write(new Text(i + "," + j), result);
     }
 }
+
 MatrixMultiplication.java
 This is the driver class that sets up and runs the MapReduce job.
 
@@ -118,6 +121,7 @@ public class MatrixMultiplication {
         System.exit(job.waitForCompletion(true) ? 0 : 1);
     }
 }
+
 
 2. Compile and Package the Code
 Compile your Java code and create a JAR file. Here’s how you can do it using Maven:
