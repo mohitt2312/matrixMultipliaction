@@ -158,3 +158,154 @@ bash
 Copy code
 hdfs dfs -ls /user/hadoop/output
 hdfs dfs -cat /user/hadoop/output/part-r-00000
+Matrix A (matrix_a.txt):
+
+Format: MatrixType,i,j,value
+Example Entries:
+css
+Copy code
+A,0,0,1
+A,0,1,2
+A,1,0,3
+A,1,1,4
+In this example, matrix A is a 2x2 matrix:
+
+css
+Copy code
+A = [ [1, 2],
+      [3, 4] ]
+Matrix B (matrix_b.txt):
+
+Format: MatrixType,i,j,value
+Example Entries:
+css
+Copy code
+B,0,0,5
+B,0,1,6
+B,1,0,7
+B,1,1,8
+In this example, matrix B is also a 2x2 matrix:
+
+css
+Copy code
+B = [ [5, 6],
+      [7, 8] ]
+Output Format
+The output of the matrix multiplication will be a file where each line represents an entry in the resulting matrix C, with format i,j,value.
+
+Assuming matrices A and B are both 2x2, the resulting matrix C will also be 2x2. The output file will look like:
+
+Output File (part-r-00000):
+
+Format: i,j,value
+Example Entries:
+Copy code
+0,0,19
+0,1,22
+1,0,43
+1,1,50
+Here, matrix C is computed as follows:
+
+𝐶
+=
+𝐴
+×
+𝐵
+=
+[
+(
+1
+⋅
+5
++
+2
+⋅
+7
+)
+(
+1
+⋅
+6
++
+2
+⋅
+8
+)
+(
+3
+⋅
+5
++
+4
+⋅
+7
+)
+(
+3
+⋅
+6
++
+4
+⋅
+8
+)
+]
+=
+[
+19
+22
+43
+50
+]
+C=A×B=[ 
+(1⋅5+2⋅7)
+(3⋅5+4⋅7)
+​
+  
+(1⋅6+2⋅8)
+(3⋅6+4⋅8)
+​
+ ]=[ 
+19
+43
+​
+  
+22
+50
+​
+ ]
+Example Flow
+Input Files:
+
+matrix_a.txt:
+
+css
+Copy code
+A,0,0,1
+A,0,1,2
+A,1,0,3
+A,1,1,4
+matrix_b.txt:
+
+css
+Copy code
+B,0,0,5
+B,0,1,6
+B,1,0,7
+B,1,1,8
+Output File (part-r-00000):
+
+Output after running the MapReduce job:
+Copy code
+0,0,19
+0,1,22
+1,0,43
+1,1,50
+How to Verify
+Input Verification:
+
+Use hdfs dfs -cat /user/hadoop/input/matrix_a.txt and hdfs dfs -cat /user/hadoop/input/matrix_b.txt to view the uploaded files.
+Output Verification:
+
+Use hdfs dfs -cat /user/hadoop/output/part-r-00000 to view the results of the multiplication.
+This example assumes a simple case of 2x2 matrices for demonstration. For larger matrices, the principle remains the same but you will need to ensure your Mapper and Reducer handle the data appropriately and efficiently.
