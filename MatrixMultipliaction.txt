@@ -13,6 +13,15 @@ public class MatrixMapper extends Mapper<Object, Text, Text, IntWritable> {
 
     private static final IntWritable value = new IntWritable();
     private Text key = new Text();
+    private int A_ROWS;
+    private int B_COLUMNS;
+
+    @Override
+    protected void setup(Context context) throws IOException, InterruptedException {
+        Configuration conf = context.getConfiguration();
+        A_ROWS = conf.getInt("A_ROWS", 1); // Default to 1 if not set
+        B_COLUMNS = conf.getInt("B_COLUMNS", 1); // Default to 1 if not set
+    }
 
     @Override
     protected void map(Object key, Text value, Context context) throws IOException, InterruptedException {
@@ -25,20 +34,22 @@ public class MatrixMapper extends Mapper<Object, Text, Text, IntWritable> {
         if (matrixType.equals("A")) {
             // Matrix A: Emit key as (i, k) with value as A[i][k]
             for (int k = 0; k < B_COLUMNS; k++) {
-                key.set(i + "," + k);
+                this.key.set(i + "," + k);
                 value.set(v);
-                context.write(key, value);
+                context.write(this.key, value);
             }
         } else if (matrixType.equals("B")) {
             // Matrix B: Emit key as (k, j) with value as B[k][j]
             for (int k = 0; k < A_ROWS; k++) {
-                key.set(k + "," + j);
+                this.key.set(k + "," + j);
                 value.set(v);
-                context.write(key, value);
+                context.write(this.key, value);
             }
         }
     }
 }
+
+
 MatrixReducer.java
 This Reducer class calculates the final matrix values by summing up the products.
 
@@ -84,14 +95,16 @@ import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 public class MatrixMultiplication {
 
     public static void main(String[] args) throws Exception {
-        if (args.length != 2) {
-            System.err.println("Usage: MatrixMultiplication <input path> <output path>");
+        if (args.length != 4) {
+            System.err.println("Usage: MatrixMultiplication <input path> <output path> <A_rows> <B_columns>");
             System.exit(-1);
         }
 
         Configuration conf = new Configuration();
-        Job job = Job.getInstance(conf, "Matrix Multiplication");
+        conf.setInt("A_ROWS", Integer.parseInt(args[2]));
+        conf.setInt("B_COLUMNS", Integer.parseInt(args[3]));
 
+        Job job = Job.getInstance(conf, "Matrix Multiplication");
         job.setJarByClass(MatrixMultiplication.class);
         job.setMapperClass(MatrixMapper.class);
         job.setReducerClass(MatrixReducer.class);
@@ -105,6 +118,7 @@ public class MatrixMultiplication {
         System.exit(job.waitForCompletion(true) ? 0 : 1);
     }
 }
+
 2. Compile and Package the Code
 Compile your Java code and create a JAR file. Here’s how you can do it using Maven:
 
