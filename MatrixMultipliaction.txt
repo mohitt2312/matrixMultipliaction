@@ -1,334 +1,126 @@
-1. Prepare the Java Code
-MatrixMapper.java
-This Mapper class emits matrix values with keys that help the Reducer compute the matrix product.
+Sure, I will adjust the code to be in the default package. Here's the modified version of the code:
 
-java
-Copy code
-import java.io.IOException;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.io.IntWritable;
-import org.apache.hadoop.io.Text;
-import org.apache.hadoop.mapreduce.Mapper;
+### MatrixMultiply.java
 
-public class MatrixMapper extends Mapper<Object, Text, Text, IntWritable> {
-
-    private static final IntWritable value = new IntWritable();
-    private Text key = new Text();
-    private int A_ROWS;
-    private int B_COLUMNS;
-
-    @Override
-    protected void setup(Context context) throws IOException, InterruptedException {
-        Configuration conf = context.getConfiguration();
-        A_ROWS = conf.getInt("A_ROWS", 1); // Default to 1 if not set
-        B_COLUMNS = conf.getInt("B_COLUMNS", 1); // Default to 1 if not set
-    }
-
-    @Override
-    protected void map(Object key, Text value, Context context) throws IOException, InterruptedException {
-        String[] parts = value.toString().split(",");
-        String matrixType = parts[0]; // "A" or "B"
-        int i = Integer.parseInt(parts[1]);
-        int j = Integer.parseInt(parts[2]);
-        int v = Integer.parseInt(parts[3]);
-
-        this.value.set(v);
-
-        if (matrixType.equals("A")) {
-            for (int k = 0; k < B_COLUMNS; k++) {
-                this.key.set(i + "," + k);
-                context.write(this.key, this.value);
-                System.out.println("Mapper Output: " + this.key.toString() + " -> " + this.value.get());
-            }
-        } else if (matrixType.equals("B")) {
-            for (int k = 0; k < A_ROWS; k++) {
-                this.key.set(k + "," + j);
-                context.write(this.key, this.value);
-                System.out.println("Mapper Output: " + this.key.toString() + " -> " + this.value.get());
-            }
-        }
-    }
-}
-
-
-
-
-MatrixReducer.java
-This Reducer class calculates the final matrix values by summing up the products.
-
-java
-Copy code
-import java.io.IOException;
-import org.apache.hadoop.io.IntWritable;
-import org.apache.hadoop.io.Text;
-import org.apache.hadoop.mapreduce.Reducer;
-
-public class MatrixReducer extends Reducer<Text, IntWritable, Text, IntWritable> {
-
-    private IntWritable result = new IntWritable();
-
-    @Override
-    protected void reduce(Text key, Iterable<IntWritable> values, Context context) throws IOException, InterruptedException {
-        String[] indices = key.toString().split(",");
-        int i = Integer.parseInt(indices[0]);
-        int j = Integer.parseInt(indices[1]);
-
-        int sum = 0;
-        for (IntWritable value : values) {
-            sum += value.get();
-        }
-
-        result.set(sum);
-        System.out.println("Reducer Output: " + i + "," + j + " -> " + sum);
-        context.write(new Text(i + "," + j), result);
-    }
-}
-
-
-
-MatrixMultiplication.java
-This is the driver class that sets up and runs the MapReduce job.
-
-java
-Copy code
-import org.apache.hadoop.conf.Configuration;
+```java
+import org.apache.hadoop.conf.*;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.io.IntWritable;
-import org.apache.hadoop.io.Text;
-import org.apache.hadoop.mapreduce.Job;
-import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
+import org.apache.hadoop.io.*;
+import org.apache.hadoop.mapreduce.*;
+import org.apache.hadoop.mapreduce.lib.input.FileInputFormat; 
+import org.apache.hadoop.mapreduce.lib.input.TextInputFormat; 
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
+import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat; 
 
-public class MatrixMultiplication {
-
-    public static void main(String[] args) throws Exception {
-        if (args.length != 4) {
-            System.err.println("Usage: MatrixMultiplication <input path> <output path> <A_rows> <B_columns>");
-            System.exit(-1);
+public class MatrixMultiply {
+    public static void main(String[] args) throws Exception { 
+        if (args.length != 2) {
+            System.err.println("Usage: MatrixMultiply <in_dir> <out_dir>"); 
+            System.exit(2);
         }
-
+        
         Configuration conf = new Configuration();
-        conf.setInt("A_ROWS", Integer.parseInt(args[2]));
-        conf.setInt("B_COLUMNS", Integer.parseInt(args[3]));
+        conf.set("m", "1000");
+        conf.set("n", "100");
+        conf.set("p", "1000");
 
-        Job job = Job.getInstance(conf, "Matrix Multiplication");
-        job.setJarByClass(MatrixMultiplication.class);
-        job.setMapperClass(MatrixMapper.class);
-        job.setReducerClass(MatrixReducer.class);
-
-        job.setOutputKeyClass(Text.class);
-        job.setOutputValueClass(IntWritable.class);
+        @SuppressWarnings("deprecation")
+        Job job = new Job(conf, "MatrixMultiply"); 
+        job.setJarByClass(MatrixMultiply.class); 
+        job.setOutputKeyClass(Text.class); 
+        job.setOutputValueClass(Text.class); 
+        job.setMapperClass(Map.class);
+        job.setReducerClass(Reduce.class); 
+        job.setInputFormatClass(TextInputFormat.class);
+        job.setOutputFormatClass(TextOutputFormat.class); 
 
         FileInputFormat.addInputPath(job, new Path(args[0]));
-        FileOutputFormat.setOutputPath(job, new Path(args[1]));
-
-        System.exit(job.waitForCompletion(true) ? 0 : 1);
+        FileOutputFormat.setOutputPath(job, new Path(args[1])); 
+        job.waitForCompletion(true);
     }
 }
+```
 
+### Map.java
 
+```java
+import org.apache.hadoop.conf.*;
+import org.apache.hadoop.io.LongWritable;
+import org.apache.hadoop.io.Text;
+import java.io.IOException;
 
-2. Compile and Package the Code
-Compile your Java code and create a JAR file. Here’s how you can do it using Maven:
+public class Map extends org.apache.hadoop.mapreduce.Mapper<LongWritable, Text, Text, Text> {
+    @Override
+    public void map(LongWritable key, Text value, Context context) throws IOException, InterruptedException {
+        Configuration conf = context.getConfiguration();
+        int m = Integer.parseInt(conf.get("m"));
+        int p = Integer.parseInt(conf.get("p"));
 
-Create a Maven pom.xml file with the necessary dependencies.
-xml
-Copy code
-<project xmlns="http://maven.apache.org/POM/4.0.0"
-         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/POM/4.0.0">
-    <modelVersion>4.0.0</modelVersion>
-    <groupId>com.example</groupId>
-    <artifactId>matrix-multiplication</artifactId>
-    <version>1.0-SNAPSHOT</version>
-    <dependencies>
-        <dependency>
-            <groupId>org.apache.hadoop</groupId>
-            <artifactId>hadoop-common</artifactId>
-            <version>3.3.4</version>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.hadoop</groupId>
-            <artifactId>hadoop-mapreduce-client-core</artifactId>
-            <version>3.3.4</version>
-        </dependency>
-    </dependencies>
-</project>
-Build the JAR file:
-bash
-Copy code
-mvn clean package
-This will create a JAR file in the target directory (e.g., matrix-multiplication-1.0-SNAPSHOT.jar).
+        String line = value.toString();
+        // (M, i, j, Mij)
+        String[] indicesAndValue = line.split(",");
+        Text outputKey = new Text();
+        Text outputValue = new Text();
 
-3. Upload Input Files to HDFS
-Assuming you have matrix_a.txt and matrix_b.txt prepared, upload them to HDFS:
+        if (indicesAndValue[0].equals("M")) {
+            for (int k = 0; k < p; k++) {
+                outputKey.set(indicesAndValue[1] + "," + k); // outputKey.set(i,k);
+                outputValue.set(indicesAndValue[0] + "," + indicesAndValue[2] + "," + indicesAndValue[3]); // outputValue.set(M,j,Mij);
+                context.write(outputKey, outputValue);
+            }
+        } else {
+            // (N, j, k, Njk)
+            for (int i = 0; i < m; i++) {
+                outputKey.set(i + "," + indicesAndValue[2]); 
+                outputValue.set("N," + indicesAndValue[1] + "," + indicesAndValue[3]); 
+                context.write(outputKey, outputValue);
+            }
+        }
+    }
+}
+```
 
-bash
-Copy code
-hdfs dfs -mkdir -p /user/hadoop/input
-hdfs dfs -put matrix_a.txt /user/hadoop/input/
-hdfs dfs -put matrix_b.txt /user/hadoop/input/
-4. Run the MapReduce Job
-Submit the job to Hadoop:
+### Reduce.java
 
-bash
-Copy code
-hadoop jar target/matrix-multiplication-1.0-SNAPSHOT.jar MatrixMultiplication /user/hadoop/input /user/hadoop/output
-5. Check the Output
-Once the job completes, check the output directory:
+```java
+import org.apache.hadoop.io.Text;
+import java.io.IOException;
+import java.util.HashMap;
 
-bash
-Copy code
-hdfs dfs -ls /user/hadoop/output
-hdfs dfs -cat /user/hadoop/output/part-r-00000
-Matrix A (matrix_a.txt):
+public class Reduce extends org.apache.hadoop.mapreduce.Reducer<Text, Text, Text, Text> { 
+    @Override
+    public void reduce(Text key, Iterable<Text> values, Context context) throws IOException, InterruptedException {
+        String[] value;
+        //key=(i,k),
+        //Values = [(M/N,j,V/W),..]
+        HashMap<Integer, Float> hashA = new HashMap<>();
+        HashMap<Integer, Float> hashB = new HashMap<>();
+        
+        for (Text val : values) {
+            value = val.toString().split(",");
+            if (value[0].equals("M")) {
+                hashA.put(Integer.parseInt(value[1]), Float.parseFloat(value[2]));
+            } else {
+                hashB.put(Integer.parseInt(value[1]), Float.parseFloat(value[2]));
+            }
+        }
+        
+        int n = Integer.parseInt(context.getConfiguration().get("n"));
+        float result = 0.0f;
+        float m_ij;
+        float n_jk;
+        
+        for (int j = 0; j < n; j++) {
+            m_ij = hashA.getOrDefault(j, 0.0f); 
+            n_jk = hashB.getOrDefault(j, 0.0f); 
+            result += m_ij * n_jk;
+        }
+        
+        if (result != 0.0f) {
+            context.write(null, new Text(key.toString() + "," + result));
+        }
+    }
+}
+```
 
-Format: MatrixType,i,j,value
-Example Entries:
-css
-Copy code
-A,0,0,1
-A,0,1,2
-A,1,0,3
-A,1,1,4
-In this example, matrix A is a 2x2 matrix:
-
-css
-Copy code
-A = [ [1, 2],
-      [3, 4] ]
-Matrix B (matrix_b.txt):
-
-Format: MatrixType,i,j,value
-Example Entries:
-css
-Copy code
-B,0,0,5
-B,0,1,6
-B,1,0,7
-B,1,1,8
-In this example, matrix B is also a 2x2 matrix:
-
-css
-Copy code
-B = [ [5, 6],
-      [7, 8] ]
-Output Format
-The output of the matrix multiplication will be a file where each line represents an entry in the resulting matrix C, with format i,j,value.
-
-Assuming matrices A and B are both 2x2, the resulting matrix C will also be 2x2. The output file will look like:
-
-Output File (part-r-00000):
-
-Format: i,j,value
-Example Entries:
-Copy code
-0,0,19
-0,1,22
-1,0,43
-1,1,50
-Here, matrix C is computed as follows:
-
-𝐶
-=
-𝐴
-×
-𝐵
-=
-[
-(
-1
-⋅
-5
-+
-2
-⋅
-7
-)
-(
-1
-⋅
-6
-+
-2
-⋅
-8
-)
-(
-3
-⋅
-5
-+
-4
-⋅
-7
-)
-(
-3
-⋅
-6
-+
-4
-⋅
-8
-)
-]
-=
-[
-19
-22
-43
-50
-]
-C=A×B=[ 
-(1⋅5+2⋅7)
-(3⋅5+4⋅7)
-​
-  
-(1⋅6+2⋅8)
-(3⋅6+4⋅8)
-​
- ]=[ 
-19
-43
-​
-  
-22
-50
-​
- ]
-Example Flow
-Input Files:
-
-matrix_a.txt:
-
-css
-Copy code
-A,0,0,1
-A,0,1,2
-A,1,0,3
-A,1,1,4
-matrix_b.txt:
-
-css
-Copy code
-B,0,0,5
-B,0,1,6
-B,1,0,7
-B,1,1,8
-Output File (part-r-00000):
-
-Output after running the MapReduce job:
-Copy code
-0,0,19
-0,1,22
-1,0,43
-1,1,50
-How to Verify
-Input Verification:
-
-Use hdfs dfs -cat /user/hadoop/input/matrix_a.txt and hdfs dfs -cat /user/hadoop/input/matrix_b.txt to view the uploaded files.
-Output Verification:
-
-Use hdfs dfs -cat /user/hadoop/output/part-r-00000 to view the results of the multiplication.
-This example assumes a simple case of 2x2 matrices for demonstration. For larger matrices, the principle remains the same but you will need to ensure your Mapper and Reducer handle the data appropriately and efficiently.
+Now all the classes are in the default package and should work as expected.
