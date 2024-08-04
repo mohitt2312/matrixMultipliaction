@@ -32,19 +32,17 @@ public class MatrixMapper extends Mapper<Object, Text, Text, IntWritable> {
         int j = Integer.parseInt(parts[2]);
         int v = Integer.parseInt(parts[3]);
 
+        this.value.set(v);
+
         if (matrixType.equals("A")) {
-            // Emit (i, k) with value A[i][k]
             for (int k = 0; k < B_COLUMNS; k++) {
                 this.key.set(i + "," + k);
-                value.set(v);
-                context.write(this.key, value);
+                context.write(this.key, this.value);
             }
         } else if (matrixType.equals("B")) {
-            // Emit (k, j) with value B[k][j]
             for (int k = 0; k < A_ROWS; k++) {
                 this.key.set(k + "," + j);
-                value.set(v);
-                context.write(this.key, value);
+                context.write(this.key, this.value);
             }
         }
     }
@@ -81,6 +79,7 @@ public class MatrixReducer extends Reducer<Text, IntWritable, Text, IntWritable>
         context.write(new Text(i + "," + j), result);
     }
 }
+
 
 MatrixMultiplication.java
 This is the driver class that sets up and runs the MapReduce job.
@@ -121,6 +120,7 @@ public class MatrixMultiplication {
         System.exit(job.waitForCompletion(true) ? 0 : 1);
     }
 }
+
 
 
 2. Compile and Package the Code
