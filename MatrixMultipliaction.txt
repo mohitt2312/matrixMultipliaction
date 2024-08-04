@@ -38,15 +38,18 @@ public class MatrixMapper extends Mapper<Object, Text, Text, IntWritable> {
             for (int k = 0; k < B_COLUMNS; k++) {
                 this.key.set(i + "," + k);
                 context.write(this.key, this.value);
+                System.out.println("Mapper Output: " + this.key.toString() + " -> " + this.value.get());
             }
         } else if (matrixType.equals("B")) {
             for (int k = 0; k < A_ROWS; k++) {
                 this.key.set(k + "," + j);
                 context.write(this.key, this.value);
+                System.out.println("Mapper Output: " + this.key.toString() + " -> " + this.value.get());
             }
         }
     }
 }
+
 
 
 
@@ -76,9 +79,11 @@ public class MatrixReducer extends Reducer<Text, IntWritable, Text, IntWritable>
         }
 
         result.set(sum);
+        System.out.println("Reducer Output: " + i + "," + j + " -> " + sum);
         context.write(new Text(i + "," + j), result);
     }
 }
+
 
 
 MatrixMultiplication.java
